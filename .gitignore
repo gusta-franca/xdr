@@ -1,0 +1,25 @@
+# .NET build
+**/bin/
+**/obj/
+
+# Environment variables
+**/.env
+
+# Visual Studio
+.vs/
+
+# VS Code
+.vscode/
+
+# User-specific files
+*.user
+*.suo
+
+# Logs
+*.log
+
+bin/
+downloads/
+logs/
+storage/
+users/
