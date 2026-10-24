@@ -15,11 +15,14 @@
 *.user
 *.suo
 
-# Logs
-*.log
-
+# User-specific dolfers
 bin/
+data/
 downloads/
 logs/
 storage/
 users/
+
+# Logs
+*.log
+
