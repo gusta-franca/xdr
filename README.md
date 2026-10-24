@@ -4,6 +4,17 @@ Alunos: Caroline Marques Lau, Gustavo Martins França e Maria Eduarda Bambini
 
 Disciplina: Sistemas Distribuídos
 
+## Banco de Dados
+
+O SGBD utilizado neste projeto é o MongoDB. Para subir um container e inicializar uma instância com os dados de exemplo do MongoDB Atlas (`sample_mfix` eoutros), execute:
+
+```bash
+make setup
+```
+
+O banco de dados ficará disponível em `mongodb://localhost:27017`.
+
+<!-- 
 ## Questão 1 — Chat P2P via UDP
 
 Sistema de chat que permite a troca de mensagens entre clientes utilizando o protocolo UDP.
@@ -86,4 +97,4 @@ Enviado pelo servidor em resposta ao pacote Checksum para confirmar o sucesso ou
 #### 4. Timeout (Cliente)
 - O cliente inicia um temporizador (ex. 200ms) após o envio de qualquer pacote.
 - Se a confirmação esperada (ACK para Header/Data; Response para Checksum) não for recebida antes do temporizador atingir seu limite, o cliente reenvia o pacote.
-- Se houverem muitos reenvios consecutivos (ex. mais de 5), é encerrada a transferência.
+- Se houverem muitos reenvios consecutivos (ex. mais de 5), é encerrada a transferência. -->
