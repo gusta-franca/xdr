@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package mflix;
+
+option java_package = "mflix"; 
+option java_multiple_files = true; 
+
+option csharp_namespace = "Mflix";
+
+option go_package = "mflix/pb";
+
+message Movie {
+    string id = 1;
+    string plot = 2;
+    repeated string genres = 3;
+    int32 runtime = 4;
+    repeated string cast = 5;
+    int32 num_mflix_comments = 6;
+    string title = 7;
+    string fullplot = 8;
+    repeated string countries = 9;
+    string released = 10;
+    repeated string directors = 11;
+    string rated = 12;
+    string lastupdated = 13;
+    int32 year = 14;
+    string type = 15;
+}
+
+message CreateMovieRequest { Movie movie = 1; }
+message GetMovieRequest { string id = 1; }
+message UpdateMovieRequest { Movie movie = 1; }
+message DeleteMovieRequest { string id = 1; }
+message ListByActorRequest { string actor = 1; }
+message ListByGenreRequest { string genre = 1; }
+
+message Request {
+    oneof command {
+        CreateMovieRequest create = 1;
+        GetMovieRequest get = 2;
+        UpdateMovieRequest update = 3;
+        DeleteMovieRequest delete = 4;
+        ListByActorRequest list_by_actor = 5;
+        ListByGenreRequest list_by_genre = 6;
+    }
+}
+
+enum Status {
+    OK = 0;
+    NOT_FOUND = 1;
+    INVALID_ARGUMENT = 2;
+    INTERNAL_ERROR = 3;
+}
+
+message MovieList { repeated Movie movies = 1; }
+
+message Response {
+    Status status = 1;
+    string error_message = 2;  // status != OK
+    oneof payload {
+        Movie movie = 3;
+        MovieList movies = 4;
+    }
+}
