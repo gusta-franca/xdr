@@ -1,5 +1,5 @@
 /*
-   Data de criação: 26/10/2026
+   Data de criação: 24/10/2026
    Estudante: Gustavo Martins França
    Definição do protocolo comum entre linguagens
 */
@@ -18,7 +18,7 @@ type Protocol struct {
 }
 
 // Protocol constructor
-func NewUProtocol(rw io.ReadWriter) *Protocol {
+func NewProtocol(rw io.ReadWriter) *Protocol {
 	return &Protocol{
 		rw: rw,
 	}
