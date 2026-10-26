@@ -14,6 +14,14 @@ make setup
 
 O banco de dados ficará disponível em `mongodb://localhost:27017`.
 
+# Protocolo
+
+As mensagens são enviadas via uma conexão TCP. O payload de um pacote consiste em 4 bytes para indicar o tamanho do conteúdo enviado, seguido do conteúdo.
+
+Foi utilizada a ferramenta Protobuf para o processo de marshalling/unmarshalling das mensagens.
+
+...explicar proto/mflix.proto
+
 <!-- 
 ## Questão 1 — Chat P2P via UDP
 
