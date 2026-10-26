@@ -13,7 +13,7 @@ PROTO_FILE   := mflix.proto
 
 JAVA_OUT     := javacode
 JAVA_BUILD   := javacode/build
-GO_OUT       := gocode
+GO_OUT       := go/internal/pb
 CSHARP_OUT   := csharpcode
 
 PROTOBUF_JAR ?= /usr/share/java/protobuf.jar
@@ -65,7 +65,7 @@ build-java: proto-java
 	javac -cp $(PROTOBUF_JAR) -d $(JAVA_BUILD) $$(find $(JAVA_OUT) -name '*.java' -not -path '$(JAVA_BUILD)/*')
 
 build-go: proto-go
-	cd $(GO_OUT) && { [ -f go.mod ] || go mod init mflix/pb; } && go mod tidy && go build ./...
+	cd $(GO_OUT) && go mod tidy && go build ./...
 
 # Requer um arquivo Mflix.Proto.csproj dentro de csharpcode/
 build-csharp: proto-csharp
