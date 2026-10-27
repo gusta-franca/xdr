@@ -19,6 +19,7 @@
 bin/
 data/
 downloads/
+go/internal/pb
 logs/
 storage/
 users/

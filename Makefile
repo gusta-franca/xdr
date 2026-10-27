@@ -48,7 +48,6 @@ proto-java:
 	mkdir -p $(JAVA_OUT)
 	protoc --proto_path=$(PROTO_DIR) --java_out=$(JAVA_OUT) $(PROTO_FILE)
 
-# Requer: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 proto-go:
 	mkdir -p $(GO_OUT)
 	protoc --proto_path=$(PROTO_DIR) --go_out=$(GO_OUT) --go_opt=paths=source_relative $(PROTO_FILE)
