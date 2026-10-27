@@ -15,10 +15,10 @@ Crie uma cópia de `.env.example`, a renomeie para `.env`, mova-a para `go/` e a
 
 ## Como executar
 
-Compile o arquivo `proto/mflix.proto` para a linguagem Go:
+Compile o arquivo `proto/mflix.proto` para a linguagem Go (no diretório raiz):
 
 ```bash
-proto-go
+make proto-go
 ```
 
 Compile o servidor e o cliente:
