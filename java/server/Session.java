@@ -4,12 +4,13 @@
 
 package server;
 
-import common.Style;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.List;
+
+import common.Style;
 import mflix.Movie;
 import mflix.MovieList;
 import mflix.Request;
@@ -37,7 +38,7 @@ public class Session implements Runnable {
                 if (request == null) {
                     break; // o cliente fechou a conexão
                 }
-                Style.showInfo(client.getRemoteSocketAddress() + " -> " + request.getCommandCase());
+                Style.showInfo("[" + client.getRemoteSocketAddress() + "]" + " " + request.getCommandCase());
 
                 Response response = handle(request);
                 response.writeDelimitedTo(out);
