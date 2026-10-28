@@ -6,17 +6,18 @@
 
 package server;
 
-import common.Config;
-import common.Style;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+
+import common.Config;
+import common.Style;
 
 public class Server {
 
     public static void main(String[] args) {
         Config config = new Config(".env");
-        MovieRepository repository = new MovieRepository(config.getMongoUri());
+        MovieRepository repository = new MovieRepository(config.getMongoUri(), config.getMongoDb(), config.getMongoCollection());
 
         try (ServerSocket serverSocket = new ServerSocket(config.getServerPort())) {
             Style.showInfo("Servidor aguardando conexões na porta " + config.getServerPort());

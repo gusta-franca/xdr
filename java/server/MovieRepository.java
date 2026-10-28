@@ -25,9 +25,9 @@ public class MovieRepository {
 
     private final MongoCollection<Document> collection;
 
-    public MovieRepository(String uri) {
+    public MovieRepository(String uri, String database, String collectionName) {
         MongoClient client = MongoClients.create(uri);
-        collection = client.getDatabase("sample_mflix").getCollection("movies");
+        collection = client.getDatabase(database).getCollection(collectionName);
     }
 
     /** Devolve o filme ou null se não existir. Lança IllegalArgumentException se o id for inválido. */

@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.Properties;
 
 /**
- * Lê as configurações (SERVER_ADDR e MONGO_URI) do arquivo .env.
+ * Lê as configurações do arquivo .env.
  */
 public class Config {
 
@@ -57,8 +57,16 @@ public class Config {
         return Integer.parseInt(parts[1]);
     }
 
-    public String getMongoUri() {
-        return get("MONGO_URI", "mongodb://localhost:27017");
+        public String getMongoUri() {
+        return get("MONGODB_URI", "mongodb://localhost:27017");
+    }
+
+    public String getMongoDb() {
+        return get("MONGODB_DB", "sample_mflix");
+    }
+
+    public String getMongoCollection() {
+        return get("MONGODB_COLLECTION", "movies");
     }
 }
 
