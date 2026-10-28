@@ -23,7 +23,7 @@ public class Server {
             while (true) {
                 Socket socket = serverSocket.accept();
                 Style.showInfo("Cliente conectado: " + socket.getRemoteSocketAddress());
-                new Thread(new ClientHandler(socket, repository)).start();
+                new Thread(new Session(socket, repository)).start();
             }
         } catch (IOException e) {
             Style.showError(e.getMessage());
