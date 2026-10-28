@@ -4,6 +4,9 @@
 
 # Environment variables
 **/.env
+.env
+.env.*
+!.env.example
 
 # Visual Studio
 .vs/
@@ -15,7 +18,7 @@
 *.user
 *.suo
 
-# User-specific folders
+# Local folders and generated code
 bin/
 data/
 downloads/
