@@ -1,4 +1,6 @@
 /*
+   Data última atualização: 28/10/2026
+   Estudante: Maria Eduarda Bambini
    Cliente do gerenciador de filmes (Mflix) via TCP com Protocol Buffers.
 */
 
@@ -10,9 +12,11 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import common.Config;
+import common.Protocol;
 import common.Style;
 import mflix.CreateMovieRequest;
 import mflix.DeleteMovieRequest;
@@ -37,85 +41,102 @@ public class Client {
              InputStream in = socket.getInputStream();
              OutputStream out = socket.getOutputStream()) {
 
-            Style.showSuccess("Conectado ao servidor");
-            showMenu();
+            Protocol protocol = new Protocol(in, out);
+            Style.showSuccess("Conectado ao servidor " + config.getServerHost() + ":" + config.getServerPort());
 
             while (true) {
-                String line = ask("> ");
-                if (line.isEmpty()) {
-                    continue;
-                }
+                showMenu();
+                String option = ask("Escolha uma opção: ");
 
-                String[] parts = line.split("\\s+", 2);
-                String command = parts[0].toUpperCase();
-                String argument = "";
-                if (parts.length > 1) {
-                    argument = parts[1].trim();
-                }
-
-                if (command.equals("EXIT")) {
+                if (option.equals("0")) {
+                    Style.showInfo("Encerrando o cliente. Até logo!");
                     break;
                 }
 
-                Request request = buildRequest(command, argument);
+                Request request = buildRequest(option);
                 if (request == null) {
                     continue;
                 }
 
-                request.writeDelimitedTo(out);
-                out.flush();
-
-                Response response = Response.parseDelimitedFrom(in);
+                protocol.writeMessage(request);
+                Response response = protocol.readMessage(Response.parser());
                 if (response == null) {
                     Style.showError("O servidor foi desconectado.");
                     break;
                 }
-                showResponse(response);
+                showResponse(response, option);
             }
         } catch (IOException e) {
             Style.showError(e.getMessage());
+        } catch (NoSuchElementException e) {
+            Style.showInfo("Entrada encerrada.");
         }
     }
 
+
+
     private static void showMenu() {
-        Style.showInfo("Comandos: CREATE, GET <id>, UPDATE <id>, DELETE <id>, ACTOR <nome>, GENRE <categoria>, EXIT");
+        String rule = Style.BOLD + Style.BLUE + "============================" + Style.RESET;
+
+        Style.printLine("");
+        Style.printLine(Style.BOLD + Style.BLUE + "======= MFlix Client =======" + Style.RESET);
+        menuItem("1", "Criar filme");
+        menuItem("2", "Consultar filme por ID");
+        menuItem("3", "Atualizar filme");
+        menuItem("4", "Excluir filme");
+        menuItem("5", "Listar filmes por ator");
+        menuItem("6", "Listar filmes por gênero");
+        menuItem("0", "Sair");
+        Style.printLine(rule);
+    }
+
+    private static void menuItem(String number, String label) {
+        Style.printLine(Style.MAGENTA + Style.BOLD + number + "." + Style.RESET + " " + label);
     }
 
     /** Mostra o prompt e lê uma linha do teclado. */
-    private static String ask(String text) {
-        Style.currentPrompt = text;
-        System.out.print(text);
+    private static String ask(String label) {
+        Style.currentPrompt = Style.prompt(label);
+        System.out.print(Style.currentPrompt);
         System.out.flush();
         String line = reader.nextLine().trim();
         Style.currentPrompt = "";
         return line;
     }
 
-    /** Monta o Request do comando. O argumento (id, ator ou categoria) vem da mesma linha. */
-    private static Request buildRequest(String command, String argument) {
+    /** Monta o Request da opção escolhida; devolve null se a opção for inválida. */
+    private static Request buildRequest(String option) {
         Request.Builder builder = Request.newBuilder();
 
-        if (command.equals("CREATE")) {
-            Movie movie = readMovie("");
-            builder.setCreate(CreateMovieRequest.newBuilder().setMovie(movie));
-        } else if (command.equals("GET")) {
-            builder.setGet(GetMovieRequest.newBuilder().setId(argument));
-        } else if (command.equals("UPDATE")) {
-            String id = argument;
-            if (id.isEmpty()) {
-                id = ask("Id do filme: ");
-            }
-            Movie movie = readMovie(id);
-            builder.setUpdate(UpdateMovieRequest.newBuilder().setMovie(movie));
-        } else if (command.equals("DELETE")) {
-            builder.setDelete(DeleteMovieRequest.newBuilder().setId(argument));
-        } else if (command.equals("ACTOR")) {
-            builder.setListByActor(ListByActorRequest.newBuilder().setActor(argument));
-        } else if (command.equals("GENRE")) {
-            builder.setListByGenre(ListByGenreRequest.newBuilder().setGenre(argument));
-        } else {
-            Style.showError("Comando inválido!");
-            return null;
+        switch (option) {
+            case "1":
+                Style.showInfo("Opção selecionada: criar filme.");
+                builder.setCreate(CreateMovieRequest.newBuilder().setMovie(readMovie("")));
+                break;
+            case "2":
+                Style.showInfo("Opção selecionada: consultar filme por ID.");
+                builder.setGet(GetMovieRequest.newBuilder().setId(ask("Digite o ID do filme: ")));
+                break;
+            case "3":
+                Style.showInfo("Opção selecionada: atualizar filme.");
+                String id = ask("Digite o ID do filme: ");
+                builder.setUpdate(UpdateMovieRequest.newBuilder().setMovie(readMovie(id)));
+                break;
+            case "4":
+                Style.showInfo("Opção selecionada: excluir filme.");
+                builder.setDelete(DeleteMovieRequest.newBuilder().setId(ask("Digite o ID do filme: ")));
+                break;
+            case "5":
+                Style.showInfo("Opção selecionada: pesquisar por ator.");
+                builder.setListByActor(ListByActorRequest.newBuilder().setActor(ask("Digite o nome do ator: ")));
+                break;
+            case "6":
+                Style.showInfo("Opção selecionada: pesquisar por gênero.");
+                builder.setListByGenre(ListByGenreRequest.newBuilder().setGenre(ask("Digite o gênero dos filmes: ")));
+                break;
+            default:
+                Style.showWarning("Opção inválida. Escolha um número de 0 a 6.");
+                return null;
         }
         return builder.build();
     }
@@ -142,9 +163,8 @@ public class Client {
     /** Separa o texto por vírgula, remove espaços e ignora itens vazios. */
     private static List<String> splitList(String text) {
         List<String> items = new ArrayList<>();
-        String[] parts = text.split(",");
-        for (int i = 0; i < parts.length; i++) {
-            String item = parts[i].trim();
+        for (String part : text.split(",")) {
+            String item = part.trim();
             if (!item.isEmpty()) {
                 items.add(item);
             }
@@ -153,43 +173,58 @@ public class Client {
     }
 
     /** Lê um inteiro; se vier vazio ou inválido, devolve 0. */
-    private static int readInt(String text) {
+    private static int readInt(String label) {
         try {
-            return Integer.parseInt(ask(text));
+            return Integer.parseInt(ask(label));
         } catch (NumberFormatException e) {
             return 0;
         }
     }
 
-    private static void showResponse(Response response) {
+    private static void showResponse(Response response, String option) {
         if (response.getStatus() != Status.OK) {
             Style.showError(response.getStatus() + ": " + response.getErrorMessage());
             return;
         }
 
         if (response.hasMovie()) {
+            if (option.equals("1")) {
+                Style.showSuccess("Filme criado com sucesso.");
+            } else if (option.equals("3")) {
+                Style.showSuccess("Filme atualizado com sucesso.");
+            }
+            Style.printLine("");
             showMovie(response.getMovie());
         } else if (response.hasMovies()) {
-            MovieList list = response.getMovies();
-            Style.showInfo("Quantidade: " + list.getMoviesCount());
-            for (int i = 0; i < list.getMoviesCount(); i++) {
-                Movie movie = list.getMovies(i);
-                Style.printLine(" - " + movie.getTitle() + " (" + movie.getYear() + ") id=" + movie.getId());
-            }
+            showMovieList(response.getMovies());
         } else {
-            Style.showSuccess("Operação realizada com sucesso!");
+            Style.showSuccess("Filme excluído com sucesso.");
+        }
+    }
+
+    private static void showMovieList(MovieList list) {
+        int total = list.getMoviesCount();
+        if (total == 0) {
+            Style.showWarning("Nenhum filme encontrado.");
+            return;
+        }
+
+        Style.showSuccess(total + " filme(s) encontrado(s).");
+        for (int i = 0; i < total; i++) {
+            Style.printLine("");
+            Style.printLine(Style.GRAY + "Filme " + (i + 1) + " de " + total + Style.RESET);
+            showMovie(list.getMovies(i));
         }
     }
 
     private static void showMovie(Movie movie) {
-        Style.printLine(Style.SEPARATOR);
-        Style.printLine(Style.BOLD + movie.getTitle() + Style.RESET + " (" + movie.getYear() + ")");
-        Style.printLine("Id: " + movie.getId());
-        Style.printLine("Categorias: " + String.join(", ", movie.getGenresList()));
-        Style.printLine("Elenco: " + String.join(", ", movie.getCastList()));
-        Style.printLine("Diretores: " + String.join(", ", movie.getDirectorsList()));
-        Style.printLine("Duração: " + movie.getRuntime() + " min");
-        Style.printLine("Sinopse: " + movie.getPlot());
-        Style.printLine(Style.SEPARATOR);
+        Style.field("ID", movie.getId());
+        Style.field("Título", movie.getTitle() + " (" + movie.getYear() + ")");
+        Style.field("Gêneros", String.join(", ", movie.getGenresList()));
+        Style.field("Elenco", String.join(", ", movie.getCastList()));
+        Style.field("Diretores", String.join(", ", movie.getDirectorsList()));
+        Style.field("Duração", movie.getRuntime() + " min");
+        Style.field("Classificação", movie.getRated());
+        Style.field("Sinopse", movie.getPlot());
     }
 }
