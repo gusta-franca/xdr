@@ -1,23 +1,30 @@
 /*
-   Data última atualização: 27/10/2026
+   Data última atualização: 28/10/2026
    Estudante: Maria Eduarda Bambini
    Arquivo auxiliar para estilização do terminal.
 */
 
 package common;
 
-/** Cores ANSI e funções de apoio para a saída colorida no terminal. */
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
+/** Cores ANSI e funções de apoio para a saída estilizada no terminal. */
 public final class Style {
 
     public static final String RESET = "\033[0m";
     public static final String BOLD = "\033[1m";
-    public static final String RED = "\033[31m";
-    public static final String GREEN = "\033[32m";
-    public static final String YELLOW = "\033[33m";
-    public static final String CYAN = "\033[36m";
-    public static final String GRAY = "\033[90m";
-    public static final String SEPARATOR = "------------------------------------------------------------------";
+    public static final String RED = "\033[38;5;203m";
+    public static final String GREEN = "\033[38;5;114m";
+    public static final String YELLOW = "\033[38;5;221m";
+    public static final String CYAN = "\033[38;5;80m";
+    public static final String BLUE = "\033[38;5;75m";
+    public static final String MAGENTA = "\033[38;5;177m";
+    public static final String GRAY = "\033[38;5;245m";
+
     public static volatile String currentPrompt = "";
+
+    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     private Style() {
     }
@@ -29,19 +36,35 @@ public final class Style {
         System.out.flush();
     }
 
+    private static void log(String color, String level, String text) {
+        String time = LocalTime.now().format(CLOCK);
+        printLine(GRAY + "[" + time + " " + color + BOLD + level + RESET + GRAY + "]" + RESET + " " + text);
+    }
+
     public static void showInfo(String text) {
-        printLine(CYAN + text + RESET);
+        log(CYAN, "INF", BLUE + text + RESET);
     }
 
     public static void showSuccess(String text) {
-        printLine(GREEN + text + RESET);
+        log(GREEN, "SUC", GREEN + text + RESET);
     }
 
     public static void showWarning(String text) {
-        printLine(YELLOW + "Aviso: " + text + RESET);
+        log(YELLOW, "WRN", YELLOW + text + RESET);
     }
 
     public static void showError(String text) {
-        printLine(RED + "Erro: " + text + RESET);
+        log(RED, "ERR", RED + text + RESET);
+    }
+
+    /** Monta um prompt colorido; o texto digitado pelo usuário continua na cor padrão. */
+    public static String prompt(String label) {
+        return BLUE + BOLD + label + RESET;
+    }
+
+    /** Imprime um campo no formato "Rótulo:     valor", com os valores alinhados. */
+    public static void field(String label, String value) {
+        String text = value.isEmpty() ? "—" : value;
+        printLine(GRAY + String.format("%-15s", label + ":") + RESET + text);
     }
 }

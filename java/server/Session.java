@@ -1,4 +1,6 @@
 /*
+   Data última atualização: 28/10/2026
+   Estudante: Maria Eduarda Bambini
    Atende um cliente: lê cada Request, executa e devolve um Response.
 */
 
@@ -10,6 +12,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.List;
 
+import common.Protocol;
 import common.Style;
 import mflix.Movie;
 import mflix.MovieList;
@@ -33,16 +36,17 @@ public class Session implements Runnable {
              InputStream in = client.getInputStream();
              OutputStream out = client.getOutputStream()) {
 
+            Protocol protocol = new Protocol(in, out);
+
             while (true) {
-                Request request = Request.parseDelimitedFrom(in);
+                Request request = protocol.readMessage(Request.parser());
                 if (request == null) {
-                    break; // o cliente fechou a conexão
+                    break;
                 }
-                Style.showInfo("[" + client.getRemoteSocketAddress() + "]" + " " + request.getCommandCase());
+                Style.showInfo("[" + client.getRemoteSocketAddress() + "] " + request.getCommandCase());
 
                 Response response = handle(request);
-                response.writeDelimitedTo(out);
-                out.flush();
+                protocol.writeMessage(response);
             }
         } catch (IOException e) {
             Style.showWarning("Conexão encerrada: " + e.getMessage());
@@ -70,10 +74,10 @@ public class Session implements Runnable {
                     return error(Status.INVALID_ARGUMENT, "Comando não informado");
             }
         } catch (IllegalArgumentException e) {
-            // new ObjectId(...) lança essa exceção quando o id é mal formado
             return error(Status.INVALID_ARGUMENT, "Id inválido");
         } catch (Exception e) {
-            Style.showError(e.getMessage());
+            e.printStackTrace();
+            Style.showError(e.toString());
             return error(Status.INTERNAL_ERROR, "Erro interno no servidor");
         }
     }
