@@ -1,5 +1,7 @@
 /*
-   Acesso à coleção movies do MongoDB (banco sample_mflix).
+    Última atualização: 28/10/2026
+    Estudante: Maria Eduarda Bambini
+    Acesso à coleção movies do MongoDB (banco sample_mflix).
 */
 
 package server;

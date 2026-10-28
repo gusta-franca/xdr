@@ -1,7 +1,7 @@
 /*
-   Data última atualização: 28/10/2026
-   Estudante: Maria Eduarda Bambini
-   Cliente do gerenciador de filmes (Mflix) via TCP com Protocol Buffers.
+    Última atualização: 28/10/2026
+    Estudante: Maria Eduarda Bambini
+    Cliente do gerenciador de filmes (Mflix) via TCP com Protocol Buffers.
 */
 
 package client;
@@ -34,6 +34,7 @@ public class Client {
 
     private static Scanner reader = new Scanner(System.in);
 
+    /** Conecta ao servidor e repete o ciclo menu, pedido e resposta até o usuário sair. */
     public static void main(String[] args) {
         Config config = new Config(".env");
 

@@ -82,6 +82,8 @@ public class Session implements Runnable {
         }
     }
 
+    /* Métodos/operações disponíveis. */
+    
     private Response create(Movie movie) {
         if (movie.getTitle().isEmpty()) {
             return error(Status.INVALID_ARGUMENT, "O título não pode ser vazio");

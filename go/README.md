@@ -1,5 +1,7 @@
 ## Sobre o programa
 
+Estudante: Gustavo Martins França
+
 Aplicação cliente-servidor desenvolvida em Go para a manipulação de registros de filmes em um banco de dados MongoDB, utilizando ProtocolBuf para o processo de marshalling/unmarshalling.
 
 Os comandos executados em uma sessão serão registrados em `logs/server.log`.
