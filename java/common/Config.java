@@ -57,4 +57,9 @@ public class Config {
         return Integer.parseInt(parts[1]);
     }
 
+    public String getMongoUri() {
+        String[] parts = splitAddress();
+        return 
+}
+
 }

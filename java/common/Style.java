@@ -1,5 +1,5 @@
 /*
-   Data última atualização: 12/10/2026
+   Data última atualização: 27/10/2026
    Estudante: Maria Eduarda Bambini
    Arquivo auxiliar para estilização do terminal.
 */

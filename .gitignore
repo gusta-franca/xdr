@@ -15,7 +15,7 @@
 *.user
 *.suo
 
-# User-specific dolfers
+# User-specific folders
 bin/
 data/
 downloads/
@@ -23,6 +23,9 @@ go/internal/pb
 logs/
 storage/
 users/
+java/out/
+java/lib/
+javacode/
 
 # Logs
 *.log

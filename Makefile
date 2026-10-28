@@ -1,6 +1,7 @@
 .PHONY: all clean down download restore setup up \
         proto proto-java proto-go proto-csharp \
-        build-java build-go build-csharp build-proto clean-proto
+        build-java build-go build-csharp build-proto clean-proto \
+		mongo-libs compile-java run-server run-client clean-java
 
 DATA_DIR       := data
 ARCHIVE_FILE   := $(DATA_DIR)/sampledata.archive
@@ -17,6 +18,12 @@ GO_OUT       := go/internal/pb
 CSHARP_OUT   := csharpcode
 
 PROTOBUF_JAR ?= /usr/share/java/protobuf.jar
+
+JAVA_DIR     := java
+LIB_DIR      := lib
+MAVEN_MONGO  := https://repo1.maven.org/maven2/org/mongodb
+MONGO_VER    := 5.2.0
+JAVA_CP      := build:$(PROTOBUF_JAR):../$(JAVA_BUILD):$(LIB_DIR)/*
 
 # Para o protoc encontrar o plugin protoc-gen-go
 export PATH := $(PATH):$(shell go env GOPATH 2>/dev/null)/bin
@@ -72,3 +79,24 @@ build-csharp: proto-csharp
 
 clean-proto:
 	rm -rf $(JAVA_OUT) $(GO_OUT) $(CSHARP_OUT)
+
+# Código Java do projeto (cliente e servidor)
+mongo-libs:
+	mkdir -p $(JAVA_DIR)/$(LIB_DIR)
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/mongodb-driver-sync/$(MONGO_VER)/mongodb-driver-sync-$(MONGO_VER).jar
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/mongodb-driver-core/$(MONGO_VER)/mongodb-driver-core-$(MONGO_VER).jar
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/bson/$(MONGO_VER)/bson-$(MONGO_VER).jar
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/bson-record-codec/$(MONGO_VER)/bson-record-codec-$(MONGO_VER).jar
+
+compile-java: build-java
+	mkdir -p $(JAVA_DIR)/build
+	cd $(JAVA_DIR) && javac -cp "$(JAVA_CP)" -d build $$(find client common server -name '*.java')
+
+run-server: compile-java
+	cd $(JAVA_DIR) && java -cp "$(JAVA_CP)" server.Server
+
+run-client: compile-java
+	cd $(JAVA_DIR) && java -cp "$(JAVA_CP)" client.Client
+
+clean-java:
+	rm -rf $(JAVA_DIR)/build
