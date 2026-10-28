@@ -6,7 +6,7 @@ Disciplina: Sistemas Distribuídos
 
 ## Banco de Dados
 
-O SGBD utilizado neste projeto é o MongoDB. Para subir um container e inicializar uma instância com os dados de exemplo do MongoDB Atlas (`sample_mfix` eoutros), execute:
+O SGBD utilizado neste projeto é o MongoDB. Para subir um container e inicializar uma instância com os dados de exemplo do MongoDB Atlas (`sample_mfix` e outros), execute:
 
 ```bash
 make setup
