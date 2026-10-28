@@ -4,14 +4,27 @@
 
 package client;
 
-import common.Config;
-import common.Style;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
-import mflix.*;
+
+import common.Config;
+import common.Style;
+import mflix.CreateMovieRequest;
+import mflix.DeleteMovieRequest;
+import mflix.GetMovieRequest;
+import mflix.ListByActorRequest;
+import mflix.ListByGenreRequest;
+import mflix.Movie;
+import mflix.MovieList;
+import mflix.Request;
+import mflix.Response;
+import mflix.Status;
+import mflix.UpdateMovieRequest;
 
 public class Client {
 
@@ -28,13 +41,23 @@ public class Client {
             showMenu();
 
             while (true) {
-                String option = ask("> ").toUpperCase();
+                String line = ask("> ");
+                if (line.isEmpty()) {
+                    continue;
+                }
 
-                if (option.equals("EXIT")) {
+                String[] parts = line.split("\\s+", 2);
+                String command = parts[0].toUpperCase();
+                String argument = "";
+                if (parts.length > 1) {
+                    argument = parts[1].trim();
+                }
+
+                if (command.equals("EXIT")) {
                     break;
                 }
 
-                Request request = buildRequest(option);
+                Request request = buildRequest(command, argument);
                 if (request == null) {
                     continue;
                 }
@@ -55,7 +78,7 @@ public class Client {
     }
 
     private static void showMenu() {
-        Style.showInfo("Comandos: CREATE, GET, UPDATE, DELETE, ACTOR, GENRE, EXIT");
+        Style.showInfo("Comandos: CREATE, GET <id>, UPDATE <id>, DELETE <id>, ACTOR <nome>, GENRE <categoria>, EXIT");
     }
 
     /** Mostra o prompt e lê uma linha do teclado. */
@@ -68,28 +91,28 @@ public class Client {
         return line;
     }
 
-    private static Request buildRequest(String option) {
+    /** Monta o Request do comando. O argumento (id, ator ou categoria) vem da mesma linha. */
+    private static Request buildRequest(String command, String argument) {
         Request.Builder builder = Request.newBuilder();
 
-        if (option.equals("CREATE")) {
+        if (command.equals("CREATE")) {
             Movie movie = readMovie("");
             builder.setCreate(CreateMovieRequest.newBuilder().setMovie(movie));
-        } else if (option.equals("GET")) {
-            String id = ask("Id: ");
-            builder.setGet(GetMovieRequest.newBuilder().setId(id));
-        } else if (option.equals("UPDATE")) {
-            String id = ask("Id do filme: ");
+        } else if (command.equals("GET")) {
+            builder.setGet(GetMovieRequest.newBuilder().setId(argument));
+        } else if (command.equals("UPDATE")) {
+            String id = argument;
+            if (id.isEmpty()) {
+                id = ask("Id do filme: ");
+            }
             Movie movie = readMovie(id);
             builder.setUpdate(UpdateMovieRequest.newBuilder().setMovie(movie));
-        } else if (option.equals("DELETE")) {
-            String id = ask("Id: ");
-            builder.setDelete(DeleteMovieRequest.newBuilder().setId(id));
-        } else if (option.equals("ACTOR")) {
-            String actor = ask("Ator: ");
-            builder.setListByActor(ListByActorRequest.newBuilder().setActor(actor));
-        } else if (option.equals("GENRE")) {
-            String genre = ask("Categoria: ");
-            builder.setListByGenre(ListByGenreRequest.newBuilder().setGenre(genre));
+        } else if (command.equals("DELETE")) {
+            builder.setDelete(DeleteMovieRequest.newBuilder().setId(argument));
+        } else if (command.equals("ACTOR")) {
+            builder.setListByActor(ListByActorRequest.newBuilder().setActor(argument));
+        } else if (command.equals("GENRE")) {
+            builder.setListByGenre(ListByGenreRequest.newBuilder().setGenre(argument));
         } else {
             Style.showError("Comando inválido!");
             return null;
@@ -109,33 +132,24 @@ public class Client {
         movie.setReleased(ask("Lançamento: "));
         movie.setRuntime(readInt("Duração (min): "));
         movie.setYear(readInt("Ano: "));
-
-        String[] genres = ask("Categorias (separe por vírgula): ").split(",");
-        String[] cast = ask("Elenco (separe por vírgula): ").split(",");
-        String[] directors = ask("Diretores (separe por vírgula): ").split(",");
-        String[] countries = ask("Países (separe por vírgula): ").split(",");
-
-        for (int i = 0; i < genres.length; i++) {
-            if (!genres[i].trim().isEmpty()) {
-                movie.addGenres(genres[i].trim());
-            }
-        }
-        for (int i = 0; i < cast.length; i++) {
-            if (!cast[i].trim().isEmpty()) {
-                movie.addCast(cast[i].trim());
-            }
-        }
-        for (int i = 0; i < directors.length; i++) {
-            if (!directors[i].trim().isEmpty()) {
-                movie.addDirectors(directors[i].trim());
-            }
-        }
-        for (int i = 0; i < countries.length; i++) {
-            if (!countries[i].trim().isEmpty()) {
-                movie.addCountries(countries[i].trim());
-            }
-        }
+        movie.addAllGenres(splitList(ask("Categorias (separe por vírgula): ")));
+        movie.addAllCast(splitList(ask("Elenco (separe por vírgula): ")));
+        movie.addAllDirectors(splitList(ask("Diretores (separe por vírgula): ")));
+        movie.addAllCountries(splitList(ask("Países (separe por vírgula): ")));
         return movie.build();
+    }
+
+    /** Separa o texto por vírgula, remove espaços e ignora itens vazios. */
+    private static List<String> splitList(String text) {
+        List<String> items = new ArrayList<>();
+        String[] parts = text.split(",");
+        for (int i = 0; i < parts.length; i++) {
+            String item = parts[i].trim();
+            if (!item.isEmpty()) {
+                items.add(item);
+            }
+        }
+        return items;
     }
 
     /** Lê um inteiro; se vier vazio ou inválido, devolve 0. */
