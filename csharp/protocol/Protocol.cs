@@ -1,10 +1,16 @@
-﻿using System.Buffers.Binary;
+﻿﻿/*
+    Data de criação: 28/10/2026
+    Aluna: Caroline Marques Lau
+    Arquivo do protocolo utilizado para comunicação
+*/
+
+using System.Buffers.Binary;
 using Google.Protobuf;
 
 namespace Protocol;
 
 public static class MessageProtocol
-// Não é necessário uma instância para utilizar os métodos
+// Não é necessário uma instância para utilizar os métodos (static)
 {
     public static async Task WriteMessage(Stream stream, IMessage message)
     {

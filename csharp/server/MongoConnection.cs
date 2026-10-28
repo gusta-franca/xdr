@@ -1,3 +1,8 @@
+﻿/*
+    Data de criação: 28/10/2026
+    Aluna: Caroline Marques Lau
+    Arquivo do para conexão com o banco
+*/
 
 using MongoDB.Bson;
 using MongoDB.Driver;

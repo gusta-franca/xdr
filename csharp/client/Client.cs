@@ -1,4 +1,9 @@
-﻿
+﻿﻿/*
+    Data de criação: 28/10/2026
+    Aluna: Caroline Marques Lau
+    Arquivo do cliente que realiza operações no banco
+*/
+
 using DotNetEnv;
 using System.Net;
 using System.Net.Sockets;
@@ -8,7 +13,7 @@ using Serilog;
 
 public class Client
 {
-    public static async Task Main(string[] args)
+    public static async Task Main()
     {
         Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Information()
@@ -115,7 +120,7 @@ public class Client
 
                     case "0":
                         running = false;
-                        Log.Information("A encerrar o cliente...");
+                        Log.Information("Encerrando cliente...");
                         break;
 
                     default:
@@ -136,23 +141,52 @@ public class Client
             Log.CloseAndFlush();
         }
     }
-    private static void ShowMenu()
+    private static void ShowMenu() // Comandos disponíveis
     {
         Console.WriteLine();
-        Console.WriteLine("====== MFlix Client ======");
-        Console.WriteLine("1. Criar filme");
-        Console.WriteLine("2. Consultar filme por ID");
-        Console.WriteLine("3. Atualizar filme");
-        Console.WriteLine("4. Excluir filme");
-        Console.WriteLine("5. Listar filmes por ator");
-        Console.WriteLine("6. Listar filmes por gênero");
-        Console.WriteLine("0. Sair");
-        Console.WriteLine("==========================");
+        Console.WriteLine("======= MFlix Client =======");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("1.");
+        Console.ResetColor();
+        Console.WriteLine(" Criar filme");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("2.");
+        Console.ResetColor();
+        Console.WriteLine(" Consultar filme por ID");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("3.");
+        Console.ResetColor();
+        Console.WriteLine(" Atualizar filme");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("4.");
+        Console.ResetColor();
+        Console.WriteLine(" Excluir filme");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("5.");
+        Console.ResetColor();
+        Console.WriteLine(" Listar filmes por ator");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("6.");
+        Console.ResetColor();
+        Console.WriteLine(" Listar filmes por gênero");
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.Write("0.");
+        Console.ResetColor();
+        Console.WriteLine(" Sair");
+
+        Console.WriteLine("============================");
+        Console.WriteLine();
         Console.Write("Escolha uma opção: ");
     }
-
-
-    private static async Task<TcpClient> ConnectToServer()
+    
+    private static async Task<TcpClient> ConnectToServer() // Realizar a conexão com o servidor a cada vez
     {
         string serverAddress =
             Environment.GetEnvironmentVariable("SERVER_ADDR")
@@ -186,14 +220,18 @@ public class Client
         }
     }
 
-    private static async Task CreateMovie()
+    private static async Task CreateMovie() // Criar um novo registro de filme
     {
-        Console.Write("Título: ");
-        string? title = Console.ReadLine();
+        var movie = new Movie();
 
-        if (string.IsNullOrWhiteSpace(title))
+        Log.Information("Iniciando cadastro de filme.");
+
+        Console.Write("Título: ");
+        movie.Title = Console.ReadLine() ?? "";
+
+        if (string.IsNullOrWhiteSpace(movie.Title))
         {
-            Console.WriteLine("O título não pode ser vazio.");
+            Log.Warning("O título não pode ser vazio.");
             return;
         }
 
@@ -202,33 +240,62 @@ public class Client
 
         if (!int.TryParse(yearInput, out int year))
         {
-            Console.WriteLine("Ano inválido.");
+            Log.Warning("Ano inválido.");
             return;
         }
 
-        Console.Write("Sinopse: ");
-        string? plot = Console.ReadLine();
+        movie.Year = year;
 
-        var movie = new Movie
-        {
-            Title = title,
-            Year = year,
-            Plot = plot ?? ""
-        };
+        Console.Write("Sinopse: ");
+        movie.Plot = Console.ReadLine() ?? "";
+
+        Console.Write("Duração (minutos): ");
+        string? runtimeInput = Console.ReadLine();
+
+        if (int.TryParse(runtimeInput, out int runtime))
+            movie.Runtime = runtime;
 
         Console.Write("Gêneros (separados por vírgula): ");
-        string? genresInput = Console.ReadLine();
+        movie.Genres.AddRange(ReadList());
 
-        if (!string.IsNullOrWhiteSpace(genresInput))
+        Console.Write("Elenco (separado por vírgula): ");
+        movie.Cast.AddRange(ReadList());
+
+        Console.Write("Número de comentários: ");
+        string? commentsInput = Console.ReadLine();
+
+        if (int.TryParse(commentsInput, out int comments))
+            movie.NumMflixComments = comments;
+
+        Console.Write("Sinopse completa: ");
+        movie.Fullplot = Console.ReadLine() ?? "";
+
+        Console.Write("Países (separados por vírgula): ");
+        movie.Countries.AddRange(ReadList());
+
+        Console.Write("Data de lançamento: ");
+        string? releasedInput = Console.ReadLine();
+
+        if (DateTime.TryParse(releasedInput, out DateTime released))
         {
-            movie.Genres.AddRange(
-                genresInput.Split(
-                    ',',
-                    StringSplitOptions.TrimEntries |
-                    StringSplitOptions.RemoveEmptyEntries
-                )
-            );
+            movie.Released = released
+                .ToUniversalTime()
+                .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         }
+
+        Console.Write("Diretores (separados por vírgula): ");
+        movie.Directors.AddRange(ReadList());
+
+        Console.Write("Classificação indicativa: ");
+        movie.Rated = Console.ReadLine() ?? "";
+
+        // Preenchida automaticamente com a data e hora atuais em UTC.
+        movie.Lastupdated = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+        Console.WriteLine($"Última atualização: {movie.Lastupdated}");
+
+        Console.Write("Tipo: ");
+        movie.Type = Console.ReadLine() ?? "";
 
         var request = new Request
         {
@@ -237,6 +304,8 @@ public class Client
                 Movie = movie
             }
         };
+
+        Console.WriteLine();
 
         using TcpClient client = await ConnectToServer();
         using NetworkStream stream = client.GetStream();
@@ -249,20 +318,45 @@ public class Client
         if (response.Status == Status.Ok &&
             response.PayloadCase == Response.PayloadOneofCase.Movie)
         {
-            Console.WriteLine("\nFilme criado com sucesso!");
-            Console.WriteLine($"ID gerado: {response.Movie.Id}");
-            Console.WriteLine($"Título: {response.Movie.Title}");
+            Log.Information(
+                "Filme criado com sucesso. ID: {MovieId}, Título: {Title}",
+                response.Movie.Id,
+                response.Movie.Title
+            );
         }
         else
         {
-            Console.WriteLine(
-                $"Erro ({response.Status}): {response.ErrorMessage}"
+            Log.Error(
+                "Erro ao criar filme. Status: {Status}, Mensagem: {Error}",
+                response.Status,
+                response.ErrorMessage
             );
         }
     }
 
+    private static List<string> ReadList() // Função auxiliar para leitura de listas
+    {
+        return [.. (Console.ReadLine() ?? "")
+            .Split(
+                ',',
+                StringSplitOptions.TrimEntries |
+                StringSplitOptions.RemoveEmptyEntries
+            )];
+    }
 
-    private static async Task GetMovie()
+    static void PrintAttribute(string name, string? value) // Estilização de atributos
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.Write($"{name}: ");
+        Console.ResetColor();
+
+        Console.WriteLine(value);
+    }
+
+    private static async Task GetMovie() // Obter um filme do banco
     {
         Console.Write("Digite o ID do filme: ");
         string? id = Console.ReadLine();
@@ -273,8 +367,6 @@ public class Client
             Log.Warning("Consulta de filme cancelada: ID vazio.");
             return;
         }
-
-        Log.Information("Iniciando consulta do filme com ID {Id}", id);
 
         using TcpClient client = await ConnectToServer();
         using NetworkStream stream = client.GetStream();
@@ -287,7 +379,6 @@ public class Client
             }
         };
 
-        Log.Information("Enviando requisição para consultar filme {Id}", id);
         await MessageProtocol.WriteMessage(stream, request);
 
         Response response =
@@ -304,13 +395,36 @@ public class Client
                 movie.Title
             );
 
-            Console.WriteLine("\n--- Filme encontrado ---");
-            Console.WriteLine($"ID: {movie.Id}");
-            Console.WriteLine($"Título: {movie.Title}");
-            Console.WriteLine($"Ano: {movie.Year}");
-            Console.WriteLine($"Gêneros: {string.Join(", ", movie.Genres)}");
-            Console.WriteLine($"Diretores: {string.Join(", ", movie.Directors)}");
-            Console.WriteLine($"Sinopse: {movie.Plot}");
+            Console.WriteLine("\n======== Filme encontrado ========");
+
+            PrintAttribute("ID", movie.Id);
+            PrintAttribute("Título", movie.Title);
+            PrintAttribute("Ano", movie.Year != 0 ? movie.Year.ToString() : null);
+            PrintAttribute("Sinopse", movie.Plot);
+            PrintAttribute("Duração", movie.Runtime != 0
+                ? $"{movie.Runtime} minutos"
+                : null);
+            PrintAttribute("Gêneros", movie.Genres.Count > 0
+                ? string.Join(", ", movie.Genres)
+                : null);
+            PrintAttribute("Elenco", movie.Cast.Count > 0
+                ? string.Join(", ", movie.Cast)
+                : null);
+            PrintAttribute("Número de comentários", movie.NumMflixComments != 0
+                ? movie.NumMflixComments.ToString()
+                : null);
+            PrintAttribute("Sinopse completa", movie.Fullplot);
+            PrintAttribute("Países", movie.Countries.Count > 0
+                ? string.Join(", ", movie.Countries)
+                : null);
+            PrintAttribute("Lançamento", movie.Released);
+            PrintAttribute("Diretores", movie.Directors.Count > 0
+                ? string.Join(", ", movie.Directors)
+                : null);
+            PrintAttribute("Classificação", movie.Rated);
+            PrintAttribute("Última atualização", movie.Lastupdated);
+            PrintAttribute("Tipo", movie.Type);
+            Console.WriteLine();
         }
         else
         {
@@ -325,117 +439,139 @@ public class Client
 
             if (response.Status == Status.NotFound)
             {
-                Console.WriteLine("Nenhum filme foi encontrado com esse ID.");
+                Log.Information("Nenhum filme foi encontrado com esse ID.");
             }
         }
     }
 
-    private static async Task UpdateMovie()
+    private static async Task UpdateMovie() // Atualizar registros de um filme
     {
-        Console.Write("Digite o ID do filme que deseja atualizar: ");
+        Console.Write("ID do filme: ");
         string? id = Console.ReadLine();
 
         if (string.IsNullOrWhiteSpace(id))
-        {
-            Console.WriteLine("O ID não pode ser vazio.");
-            Log.Warning("Atualização de filme cancelada: ID vazio.");
             return;
-        }
 
-        Console.Write("Novo título: ");
-        string? title = Console.ReadLine();
+        Movie m;
 
-        if (string.IsNullOrWhiteSpace(title))
+        using (TcpClient client = await ConnectToServer())
+        using (NetworkStream stream = client.GetStream())
         {
-            Console.WriteLine("O título não pode ser vazio.");
-            Log.Warning("Atualização de filme cancelada: título vazio.");
-            return;
-        }
+            Log.Information("Consultando filme {Id} antes da atualização.", id);
 
-        Console.Write("Novo ano: ");
-        string? yearInput = Console.ReadLine();
-
-        if (!int.TryParse(yearInput, out int year))
-        {
-            Console.WriteLine("Ano inválido.");
-            Log.Warning("Atualização do filme {Id} cancelada: ano inválido.", id);
-            return;
-        }
-
-        Console.Write("Nova sinopse: ");
-        string? plot = Console.ReadLine();
-
-        var movie = new Movie
-        {
-            Id = id,
-            Title = title,
-            Year = year,
-            Plot = plot ?? ""
-        };
-
-        Console.Write("Novos gêneros (separados por vírgula): ");
-        string? genresInput = Console.ReadLine();
-
-        if (!string.IsNullOrWhiteSpace(genresInput))
-        {
-            movie.Genres.AddRange(
-                genresInput.Split(
-                    ',',
-                    StringSplitOptions.TrimEntries |
-                    StringSplitOptions.RemoveEmptyEntries
-                )
-            );
-        }
-
-        var request = new Request
-        {
-            Update = new UpdateMovieRequest
+            await MessageProtocol.WriteMessage(stream, new Request
             {
-                Movie = movie
+                Get = new GetMovieRequest { Id = id }
+            });
+
+            Response get =
+                await MessageProtocol.ReadMessage(stream, Response.Parser);
+
+            if (get.Status != Status.Ok ||
+                get.PayloadCase != Response.PayloadOneofCase.Movie)
+            {
+                Log.Warning(
+                    "Não foi possível consultar o filme {Id}: {Error}",
+                    id,
+                    get.ErrorMessage
+                );
+
+                Console.WriteLine($"Erro: {get.ErrorMessage}");
+                return;
             }
-        };
 
-        Log.Information("Iniciando atualização do filme {Id}", id);
-
-        using TcpClient client = await ConnectToServer();
-        using NetworkStream stream = client.GetStream();
-
-        await MessageProtocol.WriteMessage(stream, request);
-
-        Log.Information("Requisição de atualização enviada para o filme {Id}", id);
-
-        Response response =
-            await MessageProtocol.ReadMessage(stream, Response.Parser);
-
-        if (response.Status == Status.Ok &&
-            response.PayloadCase == Response.PayloadOneofCase.Movie)
-        {
-            Log.Information(
-                "Filme {Id} atualizado com sucesso: {Title}",
-                response.Movie.Id,
-                response.Movie.Title
-            );
-
-            Console.WriteLine("Filme atualizado com sucesso!");
-            Console.WriteLine($"ID: {response.Movie.Id}");
-            Console.WriteLine($"Título: {response.Movie.Title}");
+            m = get.Movie.Clone();
         }
+
+        Log.Information("Filme {Id} carregado para edição.", id);
+
+        Console.Write($"Título ({m.Title}): ");
+        string? input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input)) m.Title = input;
+
+        Console.Write($"Ano ({m.Year}): ");
+        input = Console.ReadLine();
+        if (int.TryParse(input, out int year)) m.Year = year;
+
+        Console.Write($"Sinopse ({m.Plot}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input)) m.Plot = input;
+
+        Console.Write($"Duração ({m.Runtime}): ");
+        input = Console.ReadLine();
+        if (int.TryParse(input, out int runtime)) m.Runtime = runtime;
+
+        Console.Write($"Gêneros ({string.Join(", ", m.Genres)}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            m.Genres.Clear();
+            m.Genres.AddRange(input.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        Console.Write($"Elenco ({string.Join(", ", m.Cast)}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            m.Cast.Clear();
+            m.Cast.AddRange(input.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        Console.Write($"Número de comentários ({m.NumMflixComments}): ");
+        input = Console.ReadLine();
+        if (int.TryParse(input, out int comments)) m.NumMflixComments = comments;
+
+        Console.Write($"Sinopse completa ({m.Fullplot}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input)) m.Fullplot = input;
+
+        Console.Write($"Países ({string.Join(", ", m.Countries)}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            m.Countries.Clear();
+            m.Countries.AddRange(input.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        Console.Write($"Lançamento ({m.Released}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input)) m.Released = input;
+
+        Console.Write($"Diretores ({string.Join(", ", m.Directors)}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            m.Directors.Clear();
+            m.Directors.AddRange(input.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        Console.Write($"Classificação ({m.Rated}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input)) m.Rated = input;
+
+        m.Lastupdated = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+        Console.Write($"Tipo ({m.Type}): ");
+        input = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(input)) m.Type = input;
+
+        using TcpClient updateClient = await ConnectToServer();
+        using NetworkStream updateStream = updateClient.GetStream();
+
+        await MessageProtocol.WriteMessage(updateStream, new Request
+        {
+            Update = new UpdateMovieRequest { Movie = m }
+        });
+
+        Response response = await MessageProtocol.ReadMessage(updateStream, Response.Parser);
+
+        if (response.Status == Status.Ok)
+            Log.Information("Filme {Id} atualizado com sucesso.", id);
         else
-        {
-            Log.Warning(
-                "Falha ao atualizar filme {Id}. Status: {Status}. Motivo: {Error}",
-                id,
-                response.Status,
-                response.ErrorMessage
-            );
-
-            Console.WriteLine(
-                $"Erro ({response.Status}): {response.ErrorMessage}"
-            );
-        }
+            Log.Warning("Falha ao atualizar filme {Id}: {Error}", id, response.ErrorMessage);
     }
 
-    private static async Task DeleteMovie()
+    private static async Task DeleteMovie() // Deletar um filme existente
     {
         Console.Write("Digite o ID do filme que deseja excluir: ");
         string? id = Console.ReadLine();
@@ -455,8 +591,6 @@ public class Client
             return;
         }
 
-        Log.Information("Iniciando exclusão do filme {Id}", id);
-
         var request = new Request
         {
             Delete = new DeleteMovieRequest
@@ -469,8 +603,6 @@ public class Client
         using NetworkStream stream = client.GetStream();
 
         await MessageProtocol.WriteMessage(stream, request);
-
-        Log.Information("Requisição de exclusão enviada para o filme {Id}", id);
 
         Response response =
             await MessageProtocol.ReadMessage(stream, Response.Parser);
@@ -490,7 +622,7 @@ public class Client
         }
     }
 
-    private static async Task ListMoviesByActor()
+    private static async Task ListMoviesByActor() // Listar filmes pelo elenco
     {
         Console.Write("Digite o nome do ator: ");
         string? actor = Console.ReadLine();
@@ -516,8 +648,6 @@ public class Client
 
         await MessageProtocol.WriteMessage(stream, request);
 
-        Log.Information("Requisição de pesquisa por ator enviada: {Actor}", actor);
-
         Response response =
             await MessageProtocol.ReadMessage(stream, Response.Parser);
 
@@ -534,23 +664,27 @@ public class Client
 
             if (movies.Count == 0)
             {
-                Console.WriteLine("Nenhum filme encontrado para esse ator.");
+                Log.Information("Nenhum filme encontrado para esse ator.");
                 return;
             }
 
-            Console.WriteLine($"\n--- Filmes com {actor} ---");
+            Console.WriteLine($"\n======== Filmes com {actor} ========");
 
             foreach (Movie movie in movies)
             {
-                Console.WriteLine("----------------------------");
-                Console.WriteLine($"ID: {movie.Id}");
-                Console.WriteLine($"Título: {movie.Title}");
-                Console.WriteLine($"Ano: {movie.Year}");
-                Console.WriteLine($"Gêneros: {string.Join(", ", movie.Genres)}");
-            }
+                Console.WriteLine();
 
-            Console.WriteLine("----------------------------");
-            Console.WriteLine($"Total de filmes: {movies.Count}");
+                PrintAttribute("ID", movie.Id);
+                PrintAttribute("Título", movie.Title);
+                PrintAttribute("Ano", movie.Year != 0 ? movie.Year.ToString() : null);
+                PrintAttribute(
+                    "Gêneros",
+                    movie.Genres.Count > 0
+                        ? string.Join(", ", movie.Genres)
+                        : null
+                );
+            }
+            Console.WriteLine();
         }
         else
         {
@@ -562,9 +696,7 @@ public class Client
             );
         }
     }
-
-
-    private static async Task ListMoviesByGenre()
+    private static async Task ListMoviesByGenre() // Listar filmes pelo gênero
     {
         Console.Write("Digite o gênero dos filmes: ");
         string? genre = Console.ReadLine();
@@ -575,11 +707,6 @@ public class Client
             Console.WriteLine("O gênero não pode ser vazio.");
             return;
         }
-
-        Log.Information(
-            "Iniciando pesquisa de filmes pelo gênero {Genre}",
-            genre
-        );
 
         var request = new Request
         {
@@ -594,20 +721,10 @@ public class Client
             using TcpClient client = await ConnectToServer();
             using NetworkStream stream = client.GetStream();
 
-            Log.Information("Conexão estabelecida para pesquisa por gênero {Genre}", genre);
-
             await MessageProtocol.WriteMessage(stream, request);
-
-            Log.Information("Requisição enviada para pesquisar o gênero {Genre}", genre);
 
             Response response =
                 await MessageProtocol.ReadMessage(stream, Response.Parser);
-
-            Log.Information(
-                "Resposta recebida para o gênero {Genre}: {Status}",
-                genre,
-                response.Status
-            );
 
             if (response.Status == Status.Ok &&
                 response.PayloadCase == Response.PayloadOneofCase.Movies)
@@ -626,31 +743,26 @@ public class Client
                         "Nenhum filme encontrado para o gênero {Genre}",
                         genre
                     );
-
-                    Console.WriteLine("Nenhum filme encontrado para esse gênero.");
                     return;
                 }
 
-                Console.WriteLine($"\n--- Filmes do gênero {genre} ---");
+                Console.WriteLine($"\n======== Filmes do gênero {genre} ========");
 
                 foreach (Movie movie in movies)
                 {
-                    Console.WriteLine("----------------------------");
-                    Console.WriteLine($"ID: {movie.Id}");
-                    Console.WriteLine($"Título: {movie.Title}");
-                    Console.WriteLine($"Ano: {movie.Year}");
-                    Console.WriteLine($"Gêneros: {string.Join(", ", movie.Genres)}");
+                    Console.WriteLine();
 
-                    Log.Information(
-                        "Filme listado: {Id} - {Title} ({Year})",
-                        movie.Id,
-                        movie.Title,
-                        movie.Year
+                    PrintAttribute("ID", movie.Id);
+                    PrintAttribute("Título", movie.Title);
+                    PrintAttribute("Ano", movie.Year != 0 ? movie.Year.ToString() : null);
+                    PrintAttribute(
+                        "Gêneros",
+                        movie.Genres.Count > 0
+                            ? string.Join(", ", movie.Genres)
+                            : null
                     );
                 }
-
-                Console.WriteLine("----------------------------");
-                Console.WriteLine($"Total de filmes: {movies.Count}");
+                Console.WriteLine();
             }
             else
             {

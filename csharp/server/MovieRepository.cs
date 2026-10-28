@@ -1,19 +1,25 @@
+/*
+   Data de criação: 28/10/2026
+   Aluna: Caroline Marques Lau
+   Arquivo de operações no banco
+*/
 
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Mflix;
+using System.Text.RegularExpressions;
 
 public class MovieRepository(MongoConnection connection)
 {
-    private readonly IMongoCollection<BsonDocument> _movies = connection.Movies;
+    private readonly IMongoCollection<BsonDocument> _movies = connection.Movies; // Binary JSON
 
-    public async Task<Movie?> GetById(string id)
+    public async Task<Movie?> GetById(string id) // Obtém um filme pelo seu ID
     {
         if (!ObjectId.TryParse(id, out ObjectId objectId))
             return null;
 
         var filter = Builders<BsonDocument>.Filter.Eq(
-            "_id", objectId);
+            "_id", objectId); // Cria o filtro para id igual ao informado
 
         var document = await _movies.Find(filter).FirstOrDefaultAsync();
 
@@ -24,7 +30,7 @@ public class MovieRepository(MongoConnection connection)
     }
 
 
-    private static Movie ToMovie(BsonDocument document)
+    private static Movie ToMovie(BsonDocument document) // Converte o Binary JSON no tipo Movie
     {
         var movie = new Movie
         {
@@ -48,7 +54,7 @@ public class MovieRepository(MongoConnection connection)
         return movie;
     }
 
-    private static IEnumerable<string> ReadStringArray(
+    private static IEnumerable<string> ReadStringArray( //Ler um campo do MongoDB com listas de textos
         BsonDocument document,
         string fieldName)
     {
@@ -63,8 +69,7 @@ public class MovieRepository(MongoConnection connection)
             .Select(item => item.AsString);
     }
 
-
-    public async Task<Movie> Create(Movie movie)
+    public async Task<Movie> Create(Movie movie) // Método para criar um novo registro de Movie no banco
     {
         var document = new BsonDocument
         {
@@ -91,30 +96,7 @@ public class MovieRepository(MongoConnection connection)
         return movie;
     }
 
-
-    private static BsonDocument ToDocument(Movie movie)
-    {
-        return new BsonDocument
-        {
-            { "plot", movie.Plot },
-            { "genres", new BsonArray(movie.Genres) },
-            { "runtime", movie.Runtime },
-            { "cast", new BsonArray(movie.Cast) },
-            { "num_mflix_comments", movie.NumMflixComments },
-            { "title", movie.Title },
-            { "fullplot", movie.Fullplot },
-            { "countries", new BsonArray(movie.Countries) },
-            { "released", movie.Released },
-            { "directors", new BsonArray(movie.Directors) },
-            { "rated", movie.Rated },
-            { "lastupdated", movie.Lastupdated },
-            { "year", movie.Year },
-            { "type", movie.Type }
-        };
-    }
-
-
-    public async Task<Movie?> UpdateById(Movie movie)
+    public async Task<Movie?> UpdateById(Movie movie) // Método utilizado para atualizar um filme no banco
     {
         if (!ObjectId.TryParse(movie.Id, out ObjectId objectId))
             return null;
@@ -146,8 +128,7 @@ public class MovieRepository(MongoConnection connection)
         return movie;
     }
 
-
-    public async Task<bool> DeleteById(string id)
+    public async Task<bool> DeleteById(string id) // Método para deletar um filme pelo seu ID
     {
         if (!ObjectId.TryParse(id, out ObjectId objectId))
             return false;
@@ -160,25 +141,26 @@ public class MovieRepository(MongoConnection connection)
         return result.DeletedCount > 0;
     }
 
-
-    public async Task<List<Movie>> ListByActor(string actor)
+    public async Task<List<Movie>> ListByActor(string actor) // Método para listar filmes baseado em um ator
     {
         var filter = Builders<BsonDocument>.Filter
-            .Eq("cast", actor);
+            .Regex("cast", new BsonRegularExpression( // Para desconsiderar maiúsculas e minúsculas
+                $"^{Regex.Escape(actor)}$", "i"));
 
         var documents = await _movies.Find(filter).ToListAsync();
 
-        return documents.Select(ToMovie).ToList();
+        return [.. documents.Select(ToMovie)];
     }
 
-    public async Task<List<Movie>> ListByGenre(string genre)
+    public async Task<List<Movie>> ListByGenre(string genre) // Método para listar filmes baseado no gênero
     {
         var filter = Builders<BsonDocument>.Filter
-            .Eq("genres", genre);
+            .Regex("genres", new BsonRegularExpression( // Para desconsiderar maiúsculas e minúsculas
+                $"^{Regex.Escape(genre)}$", "i"));
 
         var documents = await _movies.Find(filter).ToListAsync();
 
-        return documents.Select(ToMovie).ToList();
+        return [.. documents.Select(ToMovie)];
     }
 
 }

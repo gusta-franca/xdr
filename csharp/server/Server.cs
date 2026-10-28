@@ -4,6 +4,7 @@ using Mflix;
 using Serilog;
 using Protocol;
 using MongoDB.Bson;
+using Google.Protobuf;
 
 public class Server
 {
@@ -57,15 +58,16 @@ public class Server
     }
     static async Task HandleClient(TcpClient client, MovieRepository repository)
     {
+        Log.Information("Cliente conectado");
         using (client)
         {
             NetworkStream stream = client.GetStream();
             try
             {
-                Log.Information("Cliente conectado");
 
                 Request request = await MessageProtocol.ReadMessage(stream, Request.Parser);
-                Log.Information("Requisição recebida: {@Request}", request);
+                string json = JsonFormatter.ToDiagnosticString(request);
+                Log.Information("Requisição recebida:\n{Request}", json);
                 Response response;
 
                 switch (request.CommandCase)
