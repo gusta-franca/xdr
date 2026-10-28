@@ -26,6 +26,10 @@ go/internal/pb
 logs/
 storage/
 users/
+java/out/
+java/lib/
+java/build/
+javacode/
 
 # Logs
 *.log

@@ -1,11 +1,17 @@
 .PHONY: all clean down download restore setup up \
         proto proto-java proto-go proto-csharp \
-        build-java build-go build-csharp build-proto clean-proto
+        build-java build-go build-csharp build-proto clean-proto \
+        protobuf-lib mongo-libs compile-java run-server run-client clean-java
 
 DATA_DIR       := data
 ARCHIVE_FILE   := $(DATA_DIR)/sampledata.archive
 ARCHIVE_URL    := https://atlas-education.s3.amazonaws.com/sampledata.archive
 CONTAINER_NAME := mflix-db
+
+JAVA_DIR     := java
+LIB_DIR      := lib
+MAVEN_MONGO  := https://repo1.maven.org/maven2/org/mongodb
+MONGO_VER    := 5.2.0
 
 # Protocol Buffers
 PROTO_DIR    := proto/
@@ -16,7 +22,13 @@ JAVA_BUILD   := javacode/build
 GO_OUT       := go/internal/pb
 CSHARP_OUT   := csharpcode
 
-PROTOBUF_JAR ?= /usr/share/java/protobuf.jar
+PROTOC       ?= protoc
+PROTOC_VER   := $(shell $(PROTOC) --version 2>/dev/null | sed 's/libprotoc //')
+PROTOBUF_VER ?= $(shell echo "$(PROTOC_VER)" | awk -F. '{ if ($$1 >= 22) print "4." $$1 "." $$2; else print $$0 }')
+PROTOBUF_JAR := $(JAVA_DIR)/$(LIB_DIR)/protobuf-java-$(PROTOBUF_VER).jar
+
+JAVA_CP      := build:../$(JAVA_BUILD):$(LIB_DIR)/*
+RUN_CP       := $(JAVA_DIR)/build:$(JAVA_BUILD):$(JAVA_DIR)/$(LIB_DIR)/*
 
 # Para o protoc encontrar o plugin protoc-gen-go
 export PATH := $(PATH):$(shell go env GOPATH 2>/dev/null)/bin
@@ -46,20 +58,20 @@ proto: proto-java proto-go proto-csharp
 
 proto-java:
 	mkdir -p $(JAVA_OUT)
-	protoc --proto_path=$(PROTO_DIR) --java_out=$(JAVA_OUT) $(PROTO_FILE)
+	$(PROTOC) --proto_path=$(PROTO_DIR) --java_out=$(JAVA_OUT) $(PROTO_FILE)
 
 proto-go:
 	mkdir -p $(GO_OUT)
-	protoc --proto_path=$(PROTO_DIR) --go_out=$(GO_OUT) --go_opt=paths=source_relative $(PROTO_FILE)
+	$(PROTOC) --proto_path=$(PROTO_DIR) --go_out=$(GO_OUT) --go_opt=paths=source_relative $(PROTO_FILE)
 
 proto-csharp:
 	mkdir -p $(CSHARP_OUT)
-	protoc --proto_path=$(PROTO_DIR) --csharp_out=$(CSHARP_OUT) $(PROTO_FILE)
+	$(PROTOC) --proto_path=$(PROTO_DIR) --csharp_out=$(CSHARP_OUT) $(PROTO_FILE)
 
 # Compilação do código gerado
 build-proto: build-java build-go build-csharp
 
-build-java: proto-java
+build-java: proto-java protobuf-lib
 	mkdir -p $(JAVA_BUILD)
 	javac -cp $(PROTOBUF_JAR) -d $(JAVA_BUILD) $$(find $(JAVA_OUT) -name '*.java' -not -path '$(JAVA_BUILD)/*')
 
@@ -72,3 +84,28 @@ build-csharp: proto-csharp
 
 clean-proto:
 	rm -rf $(JAVA_OUT) $(GO_OUT) $(CSHARP_OUT)
+
+# Código Java do projeto (cliente e servidor)
+protobuf-lib:
+	mkdir -p $(JAVA_DIR)/$(LIB_DIR)
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) https://repo1.maven.org/maven2/com/google/protobuf/protobuf-java/$(PROTOBUF_VER)/protobuf-java-$(PROTOBUF_VER).jar
+
+mongo-libs:
+	mkdir -p $(JAVA_DIR)/$(LIB_DIR)
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/mongodb-driver-sync/$(MONGO_VER)/mongodb-driver-sync-$(MONGO_VER).jar
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/mongodb-driver-core/$(MONGO_VER)/mongodb-driver-core-$(MONGO_VER).jar
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/bson/$(MONGO_VER)/bson-$(MONGO_VER).jar
+	wget -N -P $(JAVA_DIR)/$(LIB_DIR) $(MAVEN_MONGO)/bson-record-codec/$(MONGO_VER)/bson-record-codec-$(MONGO_VER).jar
+
+compile-java: build-java
+	mkdir -p $(JAVA_DIR)/build
+	cd $(JAVA_DIR) && javac -cp "$(JAVA_CP)" -d build $$(find client common server -name '*.java')
+
+run-server: compile-java
+	java -cp "$(RUN_CP)" server.Server
+
+run-client: compile-java
+	java -cp "$(RUN_CP)" client.Client
+
+clean-java:
+	rm -rf $(JAVA_DIR)/build
