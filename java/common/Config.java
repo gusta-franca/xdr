@@ -1,6 +1,6 @@
 /*
-    Última atualização: 27/10/2026
-    Aluna: Maria Eduarda Bambini
+    Última atualização: 28/10/2026
+    Estudante: Maria Eduarda Bambini
     Arquivo compartilhado (cliente e servidor) responsável por ler as configurações do arquivo .env.
 */
 
@@ -57,14 +57,17 @@ public class Config {
         return Integer.parseInt(parts[1]);
     }
 
-        public String getMongoUri() {
+    /** Devolve a URI de conexão com o MongoDB. */
+    public String getMongoUri() {
         return get("MONGODB_URI", "mongodb://localhost:27017");
     }
 
+    /** Devolve o nome do banco de dados. */
     public String getMongoDb() {
         return get("MONGODB_DB", "sample_mflix");
     }
 
+    /** Devolve o nome da coleção de filmes. */
     public String getMongoCollection() {
         return get("MONGODB_COLLECTION", "movies");
     }

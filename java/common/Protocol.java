@@ -1,8 +1,7 @@
 /*
-   Data última atualização: 28/10/2026
-   Estudante: Maria Eduarda Bambini
-   Protocolo de enquadramento de mensagens sobre TCP: cabeçalho de 4 bytes
-   (big-endian) com o tamanho do corpo, seguido do corpo serializado em protobuf.
+    Última atualização: 28/10/2026
+    Estudante: Maria Eduarda Bambini
+    Protocolo de enquadramento de mensagens sobre TCP: cabeçalho de 4 bytes (big-endian) com o tamanho do corpo, seguido do corpo serializado em protobuf.
 */
 
 package common;
