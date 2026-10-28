@@ -25,6 +25,7 @@ storage/
 users/
 java/out/
 java/lib/
+java/build/
 javacode/
 
 # Logs
