@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/csharp/">
+    <Project Path="csharp/client/Client.csproj" />
+    <Project Path="csharp/protocol/Protocol.csproj" />
+    <Project Path="csharp/server/Server.csproj" />
+  </Folder>
+  <Folder Name="/csharp/client/" />
+  <Folder Name="/csharp/protocol/" />
+  <Folder Name="/csharp/server/" />
+</Solution>
