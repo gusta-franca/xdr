@@ -28,6 +28,7 @@ PROTOBUF_VER ?= $(shell echo "$(PROTOC_VER)" | awk -F. '{ if ($$1 >= 22) print "
 PROTOBUF_JAR := $(JAVA_DIR)/$(LIB_DIR)/protobuf-java-$(PROTOBUF_VER).jar
 
 JAVA_CP      := build:../$(JAVA_BUILD):$(LIB_DIR)/*
+RUN_CP       := $(JAVA_DIR)/build:$(JAVA_BUILD):$(JAVA_DIR)/$(LIB_DIR)/*
 
 # Para o protoc encontrar o plugin protoc-gen-go
 export PATH := $(PATH):$(shell go env GOPATH 2>/dev/null)/bin
@@ -101,10 +102,10 @@ compile-java: build-java
 	cd $(JAVA_DIR) && javac -cp "$(JAVA_CP)" -d build $$(find client common server -name '*.java')
 
 run-server: compile-java
-	cd $(JAVA_DIR) && java -cp "$(JAVA_CP)" server.Server
+	java -cp "$(RUN_CP)" server.Server
 
 run-client: compile-java
-	cd $(JAVA_DIR) && java -cp "$(JAVA_CP)" client.Client
+	java -cp "$(RUN_CP)" client.Client
 
 clean-java:
 	rm -rf $(JAVA_DIR)/build
