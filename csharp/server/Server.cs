@@ -1,4 +1,10 @@
-﻿using System.Net;
+﻿/*
+   Data de criação: 28/10/2026
+   Aluna: Caroline Marques Lau
+   Arquivo de conexão com o servidor
+*/
+
+using System.Net;
 using System.Net.Sockets;
 using Mflix;
 using Serilog;
@@ -62,235 +68,256 @@ public class Server
         using (client)
         {
             NetworkStream stream = client.GetStream();
-            try
+            while (true)
             {
-
-                Request request = await MessageProtocol.ReadMessage(stream, Request.Parser);
-                string json = JsonFormatter.ToDiagnosticString(request);
-                Log.Information("Requisição recebida:\n{Request}", json);
-                Response response;
-
-                switch (request.CommandCase)
-                {
-                    case Request.CommandOneofCase.Create:
-                        Movie movieCreate = request.Create.Movie;
-
-                        if (movieCreate is null || string.IsNullOrWhiteSpace(movieCreate.Title))
-                        {
-                            response = new Response
-                            {
-                                Status = Status.InvalidArgument,
-                                ErrorMessage = "O filme precisa ter um título."
-                            };
-
-                            break;
-                        }
-
-                        Movie createdMovie = await repository.Create(movieCreate);
-
-                        response = new Response
-                        {
-                            Status = Status.Ok,
-                            Movie = createdMovie
-                        };
-
-                        Log.Information(
-                            "Filme criado com ID {Id}",
-                            createdMovie.Id);
-
-                        break;
-
-                    case Request.CommandOneofCase.Get:
-                        Log.Information("Comando recebido: consultar filme");
-                        string id = request.Get.Id;
-                        if (!ObjectId.TryParse(id, out _))
-                        {
-                            response = new Response
-                            {
-                                Status = Status.InvalidArgument,
-                                ErrorMessage = "ID do filme inválido."
-                            };
-
-                            break;
-                        }
-                        Log.Information("Consultando filme com ID {Id}", id);
-
-                        Movie? movieGet = await repository.GetById(id);
-
-                        if (movieGet is null)
-                        {
-                            response = new Response
-                            {
-                                Status = Status.NotFound,
-                                ErrorMessage = "Filme não encontrado."
-                            };
-                        }
-                        else
-                        {
-                            response = new Response
-                            {
-                                Status = Status.Ok,
-                                Movie = movieGet
-                            };
-                        }
-
-                        break;
-
-                    case Request.CommandOneofCase.Update:
-                        Log.Information("Comando recebido: atualizar filme");
-                        Movie movie = request.Update.Movie;
-
-                        if (movie is null ||
-                            string.IsNullOrWhiteSpace(movie.Title) ||
-                            string.IsNullOrWhiteSpace(movie.Id))
-                        {
-                            response = new Response
-                            {
-                                Status = Status.InvalidArgument,
-                                ErrorMessage = "O filme precisa ter ID e título."
-                            };
-
-                            break;
-                        }
-
-                        Movie? updatedMovie = await repository.UpdateById(movie);
-
-                        if (updatedMovie is null)
-                        {
-                            response = new Response
-                            {
-                                Status = Status.NotFound,
-                                ErrorMessage = "Filme não encontrado."
-                            };
-                        }
-                        else
-                        {
-                            response = new Response
-                            {
-                                Status = Status.Ok,
-                                Movie = updatedMovie
-                            };
-                        }
-
-                        break;
-
-                    case Request.CommandOneofCase.Delete:
-                        Log.Information("Comando recebido: excluir filme");
-                        string idDelete = request.Delete.Id;
-
-                        if (!ObjectId.TryParse(idDelete, out _))
-                        {
-                            response = new Response
-                            {
-                                Status = Status.InvalidArgument,
-                                ErrorMessage = "ID do filme inválido."
-                            };
-
-                            break;
-                        }
-
-                        bool deleted = await repository.DeleteById(idDelete);
-
-                        if (!deleted)
-                        {
-                            response = new Response
-                            {
-                                Status = Status.NotFound,
-                                ErrorMessage = "Filme não encontrado."
-                            };
-                        }
-                        else
-                        {
-                            response = new Response
-                            {
-                                Status = Status.Ok
-                            };
-                        }
-
-                        break;
-
-                    case Request.CommandOneofCase.ListByActor:
-                        Log.Information("Comando recebido: listar filmes por ator");
-                        string actor = request.ListByActor.Actor;
-
-                        if (string.IsNullOrWhiteSpace(actor))
-                        {
-                            response = new Response
-                            {
-                                Status = Status.InvalidArgument,
-                                ErrorMessage = "O nome do ator não pode ser vazio."
-                            };
-
-                            break;
-                        }
-
-                        List<Movie> moviesActor = await repository.ListByActor(actor);
-
-                        response = new Response
-                        {
-                            Status = Status.Ok,
-                            Movies = new MovieList()
-                        };
-
-                        response.Movies.Movies.AddRange(moviesActor);
-
-                        break;
-
-                    case Request.CommandOneofCase.ListByGenre:
-                        Log.Information("Comando recebido: listar filmes por gênero");
-                        string genre = request.ListByGenre.Genre;
-
-                        if (string.IsNullOrWhiteSpace(genre))
-                        {
-                            response = new Response
-                            {
-                                Status = Status.InvalidArgument,
-                                ErrorMessage = "O gênero não pode ser vazio."
-                            };
-
-                            break;
-                        }
-
-                        List<Movie> moviesGenre = await repository.ListByGenre(genre);
-
-                        response = new Response
-                        {
-                            Status = Status.Ok,
-                            Movies = new MovieList()
-                        };
-
-                        response.Movies.Movies.AddRange(moviesGenre);
-
-                        break;
-
-                    default:
-                        response = new Response
-                        {
-                            Status = Status.InvalidArgument,
-                            ErrorMessage = "Nenhum comando válido foi informado."
-                        };
-                        break;
-                }
-                await MessageProtocol.WriteMessage(stream, response);
-            }
-            catch (Exception ex)
-            {
-
-                Log.Error(ex, "Erro ao processar a requisição");
-
+                Request request;
                 try
                 {
-                    Response errorResponse = new()
-                    {
-                        Status = Status.InternalError,
-                        ErrorMessage = "Erro interno ao processar a requisição."
-                    };
-
-                    await MessageProtocol.WriteMessage(stream, errorResponse);
+                    request = await MessageProtocol.ReadMessage(
+                        stream,
+                        Request.Parser);
                 }
-                catch (Exception sendEx)
+                catch (EndOfStreamException)
                 {
-                    Log.Error(sendEx, "Não foi possível enviar a resposta de erro");
+                    Log.Information("Cliente encerrou a conexão.");
+                    break;
+                }
+                catch (IOException ex)
+                {
+                    Log.Information(
+                        ex,
+                        "Conexão encerrada durante a leitura.");
+                    break;
+                }
+                try
+                {
+
+                    string json = JsonFormatter.ToDiagnosticString(request);
+                    Log.Information("Requisição recebida:\n{Request}", json);
+                    Response response;
+
+                    switch (request.CommandCase)
+                    {
+                        case Request.CommandOneofCase.Create:
+                            Movie movieCreate = request.Create.Movie;
+
+                            if (movieCreate is null || string.IsNullOrWhiteSpace(movieCreate.Title))
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.InvalidArgument,
+                                    ErrorMessage = "O filme precisa ter um título."
+                                };
+
+                                break;
+                            }
+
+                            Movie createdMovie = await repository.Create(movieCreate);
+
+                            response = new Response
+                            {
+                                Status = Status.Ok,
+                                Movie = createdMovie
+                            };
+
+                            Log.Information(
+                                "Filme criado com ID {Id}",
+                                createdMovie.Id);
+
+                            break;
+
+                        case Request.CommandOneofCase.Get:
+                            Log.Information("Comando recebido: consultar filme");
+                            string id = request.Get.Id;
+                            if (!ObjectId.TryParse(id, out _))
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.InvalidArgument,
+                                    ErrorMessage = "ID do filme inválido."
+                                };
+
+                                break;
+                            }
+                            Log.Information("Consultando filme com ID {Id}", id);
+
+                            Movie? movieGet = await repository.GetById(id);
+
+                            if (movieGet is null)
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.NotFound,
+                                    ErrorMessage = "Filme não encontrado."
+                                };
+                            }
+                            else
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.Ok,
+                                    Movie = movieGet
+                                };
+                            }
+
+                            break;
+
+                        case Request.CommandOneofCase.Update:
+                            Log.Information("Comando recebido: atualizar filme");
+                            Movie movie = request.Update.Movie;
+
+                            if (movie is null ||
+                                string.IsNullOrWhiteSpace(movie.Title) ||
+                                string.IsNullOrWhiteSpace(movie.Id))
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.InvalidArgument,
+                                    ErrorMessage = "O filme precisa ter ID e título."
+                                };
+
+                                break;
+                            }
+
+                            Movie? updatedMovie = await repository.UpdateById(movie);
+
+                            if (updatedMovie is null)
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.NotFound,
+                                    ErrorMessage = "Filme não encontrado."
+                                };
+                            }
+                            else
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.Ok,
+                                    Movie = updatedMovie
+                                };
+                            }
+
+                            break;
+
+                        case Request.CommandOneofCase.Delete:
+                            Log.Information("Comando recebido: excluir filme");
+                            string idDelete = request.Delete.Id;
+
+                            if (!ObjectId.TryParse(idDelete, out _))
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.InvalidArgument,
+                                    ErrorMessage = "ID do filme inválido."
+                                };
+
+                                break;
+                            }
+
+                            bool deleted = await repository.DeleteById(idDelete);
+
+                            if (!deleted)
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.NotFound,
+                                    ErrorMessage = "Filme não encontrado."
+                                };
+                            }
+                            else
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.Ok
+                                };
+                            }
+
+                            break;
+
+                        case Request.CommandOneofCase.ListByActor:
+                            Log.Information("Comando recebido: listar filmes por ator");
+                            string actor = request.ListByActor.Actor;
+
+                            if (string.IsNullOrWhiteSpace(actor))
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.InvalidArgument,
+                                    ErrorMessage = "O nome do ator não pode ser vazio."
+                                };
+
+                                break;
+                            }
+
+                            List<Movie> moviesActor = await repository.ListByActor(actor);
+
+                            response = new Response
+                            {
+                                Status = Status.Ok,
+                                Movies = new MovieList()
+                            };
+
+                            response.Movies.Movies.AddRange(moviesActor);
+
+                            break;
+
+                        case Request.CommandOneofCase.ListByGenre:
+                            Log.Information("Comando recebido: listar filmes por gênero");
+                            string genre = request.ListByGenre.Genre;
+
+                            if (string.IsNullOrWhiteSpace(genre))
+                            {
+                                response = new Response
+                                {
+                                    Status = Status.InvalidArgument,
+                                    ErrorMessage = "O gênero não pode ser vazio."
+                                };
+
+                                break;
+                            }
+
+                            List<Movie> moviesGenre = await repository.ListByGenre(genre);
+
+                            response = new Response
+                            {
+                                Status = Status.Ok,
+                                Movies = new MovieList()
+                            };
+
+                            response.Movies.Movies.AddRange(moviesGenre);
+
+                            break;
+
+                        default:
+                            response = new Response
+                            {
+                                Status = Status.InvalidArgument,
+                                ErrorMessage = "Nenhum comando válido foi informado."
+                            };
+                            break;
+                    }
+                    await MessageProtocol.WriteMessage(stream, response);
+                }
+                catch (Exception ex)
+                {
+
+                    Log.Error(ex, "Erro ao processar a requisição");
+
+                    try
+                    {
+                        Response errorResponse = new()
+                        {
+                            Status = Status.InternalError,
+                            ErrorMessage = "Erro interno ao processar a requisição."
+                        };
+
+                        await MessageProtocol.WriteMessage(stream, errorResponse);
+                    }
+                    catch (Exception sendEx)
+                    {
+                        Log.Error(sendEx, "Não foi possível enviar a resposta de erro");
+                    }
                 }
             }
         }
