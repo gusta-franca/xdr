@@ -35,6 +35,10 @@ public class Client
 
             Env.Load(envPath);
             Log.Information("Configuração carregada de {EnvPath}", envPath);
+
+            using TcpClient client = await ConnectToServer();
+            NetworkStream stream = client.GetStream();
+
             bool running = true;
 
             while (running)
@@ -48,7 +52,7 @@ public class Client
                         Log.Information("Opção selecionada: criar filme.");
                         try
                         {
-                            await CreateMovie();
+                            await CreateMovie(stream);
                         }
                         catch (SocketException ex)
                         {
@@ -62,14 +66,14 @@ public class Client
 
                     case "2":
                         Log.Information("Opção selecionada: consultar filme.");
-                        await GetMovie();
+                        await GetMovie(stream);
                         break;
 
                     case "3":
                         Log.Information("Opção selecionada: atualizar filme.");
                         try
                         {
-                            await UpdateMovie();
+                            await UpdateMovie(stream);
                         }
                         catch (SocketException ex)
                         {
@@ -85,7 +89,7 @@ public class Client
                         Log.Information("Opção selecionada: excluir filme.");
                         try
                         {
-                            await DeleteMovie();
+                            await DeleteMovie(stream);
                         }
                         catch (SocketException ex)
                         {
@@ -101,7 +105,7 @@ public class Client
                         Log.Information("Opção selecionada: pesquisar por ator.");
                         try
                         {
-                            await ListMoviesByActor();
+                            await ListMoviesByActor(stream);
                         }
                         catch (SocketException ex)
                         {
@@ -115,7 +119,7 @@ public class Client
 
                     case "6":
                         Log.Information("Opção selecionada: pesquisar por gênero.");
-                        await ListMoviesByGenre();
+                        await ListMoviesByGenre(stream);
                         break;
 
                     case "0":
@@ -185,7 +189,7 @@ public class Client
         Console.WriteLine();
         Console.Write("Escolha uma opção: ");
     }
-    
+
     private static async Task<TcpClient> ConnectToServer() // Realizar a conexão com o servidor a cada vez
     {
         string serverAddress =
@@ -220,31 +224,38 @@ public class Client
         }
     }
 
-    private static async Task CreateMovie() // Criar um novo registro de filme
+    private static async Task CreateMovie(NetworkStream stream) // Criar um novo registro de filme
     {
         var movie = new Movie();
 
         Log.Information("Iniciando cadastro de filme.");
 
-        Console.Write("Título: ");
-        movie.Title = Console.ReadLine() ?? "";
-
-        if (string.IsNullOrWhiteSpace(movie.Title))
+        // Solicita o título até que seja válido.
+        while (true)
         {
-            Log.Warning("O título não pode ser vazio.");
-            return;
+            Console.Write("Título: ");
+            movie.Title = Console.ReadLine() ?? "";
+
+            if (!string.IsNullOrWhiteSpace(movie.Title))
+                break;
+
+            Log.Warning("O título não pode ser vazio. Tente novamente.");
         }
 
-        Console.Write("Ano: ");
-        string? yearInput = Console.ReadLine();
-
-        if (!int.TryParse(yearInput, out int year))
+        // Solicita o ano até que seja válido.
+        while (true)
         {
-            Log.Warning("Ano inválido.");
-            return;
-        }
+            Console.Write("Ano: ");
+            string? yearInput = Console.ReadLine();
 
-        movie.Year = year;
+            if (int.TryParse(yearInput, out int year))
+            {
+                movie.Year = year;
+                break;
+            }
+
+            Log.Warning("Ano inválido. Digite um número inteiro.");
+        }
 
         Console.Write("Sinopse: ");
         movie.Plot = Console.ReadLine() ?? "";
@@ -307,9 +318,6 @@ public class Client
 
         Console.WriteLine();
 
-        using TcpClient client = await ConnectToServer();
-        using NetworkStream stream = client.GetStream();
-
         await MessageProtocol.WriteMessage(stream, request);
 
         Response response =
@@ -356,7 +364,7 @@ public class Client
         Console.WriteLine(value);
     }
 
-    private static async Task GetMovie() // Obter um filme do banco
+    private static async Task GetMovie(NetworkStream stream) // Obter um filme do banco
     {
         Console.Write("Digite o ID do filme: ");
         string? id = Console.ReadLine();
@@ -367,9 +375,6 @@ public class Client
             Log.Warning("Consulta de filme cancelada: ID vazio.");
             return;
         }
-
-        using TcpClient client = await ConnectToServer();
-        using NetworkStream stream = client.GetStream();
 
         var request = new Request
         {
@@ -444,7 +449,7 @@ public class Client
         }
     }
 
-    private static async Task UpdateMovie() // Atualizar registros de um filme
+    private static async Task UpdateMovie(NetworkStream stream) // Atualizar registros de um filme
     {
         Console.Write("ID do filme: ");
         string? id = Console.ReadLine();
@@ -454,34 +459,30 @@ public class Client
 
         Movie m;
 
-        using (TcpClient client = await ConnectToServer())
-        using (NetworkStream stream = client.GetStream())
+        Log.Information("Consultando filme {Id} antes da atualização.", id);
+
+        await MessageProtocol.WriteMessage(stream, new Request
         {
-            Log.Information("Consultando filme {Id} antes da atualização.", id);
+            Get = new GetMovieRequest { Id = id }
+        });
 
-            await MessageProtocol.WriteMessage(stream, new Request
-            {
-                Get = new GetMovieRequest { Id = id }
-            });
+        Response get =
+            await MessageProtocol.ReadMessage(stream, Response.Parser);
 
-            Response get =
-                await MessageProtocol.ReadMessage(stream, Response.Parser);
+        if (get.Status != Status.Ok ||
+            get.PayloadCase != Response.PayloadOneofCase.Movie)
+        {
+            Log.Warning(
+                "Não foi possível consultar o filme {Id}: {Error}",
+                id,
+                get.ErrorMessage
+            );
 
-            if (get.Status != Status.Ok ||
-                get.PayloadCase != Response.PayloadOneofCase.Movie)
-            {
-                Log.Warning(
-                    "Não foi possível consultar o filme {Id}: {Error}",
-                    id,
-                    get.ErrorMessage
-                );
-
-                Console.WriteLine($"Erro: {get.ErrorMessage}");
-                return;
-            }
-
-            m = get.Movie.Clone();
+            Console.WriteLine($"Erro: {get.ErrorMessage}");
+            return;
         }
+
+        m = get.Movie.Clone();
 
         Log.Information("Filme {Id} carregado para edição.", id);
 
@@ -555,15 +556,12 @@ public class Client
         input = Console.ReadLine();
         if (!string.IsNullOrWhiteSpace(input)) m.Type = input;
 
-        using TcpClient updateClient = await ConnectToServer();
-        using NetworkStream updateStream = updateClient.GetStream();
-
-        await MessageProtocol.WriteMessage(updateStream, new Request
+        await MessageProtocol.WriteMessage(stream, new Request
         {
             Update = new UpdateMovieRequest { Movie = m }
         });
 
-        Response response = await MessageProtocol.ReadMessage(updateStream, Response.Parser);
+        Response response = await MessageProtocol.ReadMessage(stream, Response.Parser);
 
         if (response.Status == Status.Ok)
             Log.Information("Filme {Id} atualizado com sucesso.", id);
@@ -571,7 +569,7 @@ public class Client
             Log.Warning("Falha ao atualizar filme {Id}: {Error}", id, response.ErrorMessage);
     }
 
-    private static async Task DeleteMovie() // Deletar um filme existente
+    private static async Task DeleteMovie(NetworkStream stream) // Deletar um filme existente
     {
         Console.Write("Digite o ID do filme que deseja excluir: ");
         string? id = Console.ReadLine();
@@ -599,9 +597,6 @@ public class Client
             }
         };
 
-        using TcpClient client = await ConnectToServer();
-        using NetworkStream stream = client.GetStream();
-
         await MessageProtocol.WriteMessage(stream, request);
 
         Response response =
@@ -621,8 +616,7 @@ public class Client
             );
         }
     }
-
-    private static async Task ListMoviesByActor() // Listar filmes pelo elenco
+    private static async Task ListMoviesByActor(NetworkStream stream) // Listar filmes pelo elenco
     {
         Console.Write("Digite o nome do ator: ");
         string? actor = Console.ReadLine();
@@ -642,9 +636,6 @@ public class Client
                 Actor = actor
             }
         };
-
-        using TcpClient client = await ConnectToServer();
-        using NetworkStream stream = client.GetStream();
 
         await MessageProtocol.WriteMessage(stream, request);
 
@@ -673,6 +664,7 @@ public class Client
             foreach (Movie movie in movies)
             {
                 Console.WriteLine();
+                Console.WriteLine();
 
                 PrintAttribute("ID", movie.Id);
                 PrintAttribute("Título", movie.Title);
@@ -684,6 +676,7 @@ public class Client
                         : null
                 );
             }
+            Console.WriteLine($"\nTotal de filmes encontrados: {movies.Count}");
             Console.WriteLine();
         }
         else
@@ -696,7 +689,7 @@ public class Client
             );
         }
     }
-    private static async Task ListMoviesByGenre() // Listar filmes pelo gênero
+    private static async Task ListMoviesByGenre(NetworkStream stream) // Listar filmes pelo gênero
     {
         Console.Write("Digite o gênero dos filmes: ");
         string? genre = Console.ReadLine();
@@ -718,8 +711,6 @@ public class Client
 
         try
         {
-            using TcpClient client = await ConnectToServer();
-            using NetworkStream stream = client.GetStream();
 
             await MessageProtocol.WriteMessage(stream, request);
 
@@ -751,6 +742,7 @@ public class Client
                 foreach (Movie movie in movies)
                 {
                     Console.WriteLine();
+                    Console.WriteLine();
 
                     PrintAttribute("ID", movie.Id);
                     PrintAttribute("Título", movie.Title);
@@ -762,6 +754,8 @@ public class Client
                             : null
                     );
                 }
+
+                Console.WriteLine($"\nTotal de filmes encontrados: {movies.Count}");
                 Console.WriteLine();
             }
             else

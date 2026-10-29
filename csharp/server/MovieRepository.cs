@@ -29,14 +29,29 @@ public class MovieRepository(MongoConnection connection)
         return ToMovie(document);
     }
 
+    private static int ReadYear(BsonDocument document)
+    {
+        if (!document.TryGetValue("year", out var value))
+            return 0;
 
+        if (value.IsInt32)
+            return value.AsInt32;
+
+        if (value.IsString &&
+            int.TryParse(value.AsString, out int year))
+        {
+            return year;
+        }
+
+        return 0;
+    }
     private static Movie ToMovie(BsonDocument document) // Converte o Binary JSON no tipo Movie
     {
         var movie = new Movie
         {
             Id = document["_id"].AsObjectId.ToString(),
             Title = document.GetValue("title", "").AsString,
-            Year = document.GetValue("year", 0).ToInt32(),
+            Year = ReadYear(document),
             Plot = document.GetValue("plot", "").AsString,
             Fullplot = document.GetValue("fullplot", "").AsString,
             Runtime = document.GetValue("runtime", 0).ToInt32(),
