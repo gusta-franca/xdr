@@ -47,7 +47,3 @@ dotnet run --project csharp/client/Client.csproj
 
 - Criar, consultar, atualizar e excluir filmes.
 - Listar filmes por ator e gênero.
-
-## Comunicação
-
-Cada operação tem sua própria conexão, evitando que uma requisição dependa do estado de uma conexão anterior.
